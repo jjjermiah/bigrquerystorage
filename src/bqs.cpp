@@ -439,6 +439,15 @@ SEXP bqs_ipc_stream(SEXP client,
     REprintf("Streamed %ld rows in %ld messages.\n", rows_count, pages_count);
   }
 
-  // Return stream
-  return Rcpp::wrap(bytes);
+  // Expose session metadata so R callers can attach to OTel spans
+  Rcpp::List session_meta = Rcpp::List::create(
+    Rcpp::Named("session_name")            = read_session.name(),
+    Rcpp::Named("estimated_bytes_scanned") = (double)read_session.estimated_total_bytes_scanned(),
+    Rcpp::Named("estimated_row_count")     = (double)read_session.estimated_row_count(),
+    Rcpp::Named("stream_count")            = (int)read_session.streams_size()
+  );
+  return Rcpp::List::create(
+    Rcpp::Named("ipc_bytes")    = Rcpp::wrap(bytes),
+    Rcpp::Named("session_meta") = session_meta
+  );
 }

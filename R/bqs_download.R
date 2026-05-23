@@ -94,7 +94,7 @@ bqs_table_download <- function(
 
   bqs_auth()
 
-  raws <- bqs_ipc_stream(
+  result <- bqs_ipc_stream(
     client = .global$client$ptr,
     project = bqs_table_name[1],
     dataset = bqs_table_name[2],
@@ -107,6 +107,19 @@ bqs_table_download <- function(
     timestamp_seconds = timestamp_seconds,
     timestamp_nanos = timestamp_nanos,
     quiet = quiet
+  )
+  raws <- result$ipc_bytes
+  session_meta <- result$session_meta
+
+  # TEMPORARY: verbose diagnostic output to confirm patch is working
+  rlang::inform(
+    c(
+      "i" = "bigrquerystorage session metadata (TEMPORARY DIAGNOSTIC)",
+      "*" = paste0("session_name: ", session_meta$session_name),
+      "*" = paste0("estimated_bytes_scanned: ", session_meta$estimated_bytes_scanned),
+      "*" = paste0("estimated_row_count: ", session_meta$estimated_row_count),
+      "*" = paste0("stream_count: ", session_meta$stream_count)
+    )
   )
 
   rlang::local_options(nanoarrow.warn_unregistered_extension = FALSE)

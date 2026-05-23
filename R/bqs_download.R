@@ -116,9 +116,23 @@ bqs_table_download <- function(
     c(
       "i" = "bigrquerystorage session metadata (TEMPORARY DIAGNOSTIC)",
       "*" = paste0("session_name: ", session_meta$session_name),
+      "*" = paste0("table: ", session_meta$table),
+      "*" = paste0("data_format: ", session_meta$data_format),
+      "*" = paste0("expire_time_seconds: ", session_meta$expire_time_seconds),
       "*" = paste0("estimated_bytes_scanned: ", session_meta$estimated_bytes_scanned),
       "*" = paste0("estimated_row_count: ", session_meta$estimated_row_count),
-      "*" = paste0("stream_count: ", session_meta$stream_count)
+      "*" = paste0("estimated_physical_file_size: ", session_meta$estimated_physical_file_size),
+      "*" = paste0("stream_count: ", session_meta$stream_count),
+      "*" = paste0("response_compression_codec: ", session_meta$response_compression_codec),
+      "*" = paste0("row_restriction: ", session_meta$row_restriction),
+      "*" = paste0("selected_fields_count: ", session_meta$selected_fields_count),
+      "*" = paste0("has_sample_percentage: ", session_meta$has_sample_percentage),
+      "*" = paste0("sample_percentage: ", session_meta$sample_percentage),
+      "*" = paste0("has_snapshot_time: ", session_meta$has_snapshot_time),
+      "*" = paste0("snapshot_time_seconds: ", session_meta$snapshot_time_seconds),
+      "*" = paste0("actual_compressed_bytes: ", session_meta$actual_compressed_bytes),
+      "*" = paste0("rows_streamed: ", session_meta$rows_streamed),
+      "*" = paste0("pages_count: ", session_meta$pages_count)
     )
   )
 

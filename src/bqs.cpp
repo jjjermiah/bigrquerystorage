@@ -188,6 +188,7 @@ public:
                 std::int64_t& n,
                 long int& rows_count,
                 long int& pages_count,
+                long int& compressed_bytes,
                 bool quiet,
                 RProgress::RProgress* pb,
                 bool last_stream) {
@@ -208,6 +209,7 @@ public:
     while (reader->Read(&method_response)) {
       to_raw(method_response.arrow_record_batch().serialized_record_batch(),
              ipc_stream);
+      compressed_bytes += (long int)method_response.arrow_record_batch().serialized_record_batch().size();
       method_request.set_offset(
         method_request.offset() + method_response.row_count());
       pages_count += 1;
@@ -401,6 +403,7 @@ SEXP bqs_ipc_stream(SEXP client,
   std::vector<uint8_t> bytes;
   long int rows_count = 0;
   long int pages_count = 0;
+  long int compressed_bytes = 0;
 
   // Retrieve ReadSession
   ReadSession read_session = client_ptr->CreateReadSession(
@@ -428,7 +431,7 @@ SEXP bqs_ipc_stream(SEXP client,
   // Add batches to IPC stream
   for (int i = 0; i < read_session.streams_size(); i++) {
     client_ptr->ReadRows(read_session.streams(i).name(), &bytes,
-                         n, rows_count, pages_count, quiet,
+                         n, rows_count, pages_count, compressed_bytes, quiet,
                          &pb, i == read_session.streams_size() - 1);
   	if (n > 0 && rows_count >= n) {
   		break;
@@ -441,10 +444,24 @@ SEXP bqs_ipc_stream(SEXP client,
 
   // Expose session metadata so R callers can attach to OTel spans
   Rcpp::List session_meta = Rcpp::List::create(
-    Rcpp::Named("session_name")            = read_session.name(),
-    Rcpp::Named("estimated_bytes_scanned") = (double)read_session.estimated_total_bytes_scanned(),
-    Rcpp::Named("estimated_row_count")     = (double)read_session.estimated_row_count(),
-    Rcpp::Named("stream_count")            = (int)read_session.streams_size()
+    Rcpp::Named("session_name")                    = read_session.name(),
+    Rcpp::Named("table")                           = read_session.table(),
+    Rcpp::Named("data_format")                     = (int)read_session.data_format(),
+    Rcpp::Named("expire_time_seconds")             = read_session.has_expire_time() ? (double)read_session.expire_time().seconds() : 0.0,
+    Rcpp::Named("estimated_bytes_scanned")         = (double)read_session.estimated_total_bytes_scanned(),
+    Rcpp::Named("estimated_row_count")             = (double)read_session.estimated_row_count(),
+    Rcpp::Named("estimated_physical_file_size")    = (double)read_session.estimated_total_physical_file_size(),
+    Rcpp::Named("stream_count")                    = (int)read_session.streams_size(),
+    Rcpp::Named("response_compression_codec")      = (int)read_session.read_options().response_compression_codec(),
+    Rcpp::Named("row_restriction")                 = read_session.read_options().row_restriction(),
+    Rcpp::Named("selected_fields_count")           = (int)read_session.read_options().selected_fields_size(),
+    Rcpp::Named("has_sample_percentage")           = (bool)read_session.read_options().has_sample_percentage(),
+    Rcpp::Named("sample_percentage")               = read_session.read_options().has_sample_percentage() ? read_session.read_options().sample_percentage() : -1.0,
+    Rcpp::Named("has_snapshot_time")               = (bool)(read_session.has_table_modifiers() && read_session.table_modifiers().has_snapshot_time()),
+    Rcpp::Named("snapshot_time_seconds")           = (read_session.has_table_modifiers() && read_session.table_modifiers().has_snapshot_time()) ? (double)read_session.table_modifiers().snapshot_time().seconds() : 0.0,
+    Rcpp::Named("actual_compressed_bytes")         = (double)compressed_bytes,
+    Rcpp::Named("rows_streamed")                   = (double)rows_count,
+    Rcpp::Named("pages_count")                     = (double)pages_count
   );
   return Rcpp::List::create(
     Rcpp::Named("ipc_bytes")    = Rcpp::wrap(bytes),
